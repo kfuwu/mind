@@ -36,7 +36,6 @@
         }
 
         .entry-content {
-            white-space: pre-wrap;
             font-size: 1.5rem;
             margin-bottom: 1rem;
         }
@@ -159,30 +158,27 @@
         const commandLine = document.getElementById('command-line');
         let isAdmin = false;
         
-        // 1. Admin Login (Forced Ctrl+Shift+V for Firefox)
-window.addEventListener('keydown', (e) => {
-    // e.code looks at the physical key, bypassing Shift/Caps Lock quirks
-    if (e.ctrlKey && e.shiftKey && (e.code === 'KeyV' || e.key.toLowerCase() === 'v')) {
-        
-        e.preventDefault(); // Stop Firefox from intercepting with a paste command
-        
-        const password = prompt("ENTER SYSTEM OVERRIDE:");
-        
-        if (!password) return; 
+        // 1. Admin Login (Ctrl+Shift+V)
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && (e.code === 'KeyV' || e.key.toLowerCase() === 'v')) {
+                e.preventDefault();
+                
+                const password = prompt("ENTER SYSTEM OVERRIDE:");
+                if (!password) return; 
 
-        signInWithEmailAndPassword(auth, "god@mind.com", password)
-            .then(() => {
-                isAdmin = true;
-                promptContainer.style.display = 'flex';
-                commandLine.focus();
-                console.log("Access Granted.");
-            })
-            .catch((error) => {
-                console.error("Auth Error:", error);
-                alert("ACCESS DENIED.");
-            });
-    }
-});
+                signInWithEmailAndPassword(auth, "god@mind.com", password)
+                    .then(() => {
+                        isAdmin = true;
+                        promptContainer.style.display = 'flex';
+                        commandLine.focus();
+                        console.log("Access Granted.");
+                    })
+                    .catch((error) => {
+                        console.error("Auth Error:", error);
+                        alert("ACCESS DENIED.");
+                    });
+            }
+        });
 
         // 2. Fetch Data Live
         const q = query(collection(db, "entries"), orderBy("createdAt", "desc"));
@@ -211,25 +207,35 @@ window.addEventListener('keydown', (e) => {
                                
                 dateString = `${month} ${day}${suffix}, ${year} ${time}`;
 
-                // Format Newlines
-let displayContent = data.content;
-if (data.type !== 'image' && data.type !== 'spotify') {
-    displayContent = displayContent.replace(/\n/g, '<br>');
-}
+                // Format & Build Content HTML
+                let contentHTML = '';
 
-// Build the correct HTML based on the type
-let contentHTML = '';
+                if (data.type === 'image') {
+                    contentHTML = `<img src="${data.content}" alt="image">`;
+                } else {
+                    const spotifyRegex = /https?:\/\/open\.spotify\.com\/track\/([a-zA-Z0-9]+)(\?[^\s]*)?/;
+                    const match = data.content.match(spotifyRegex);
 
-if (data.type === 'image') {
-    contentHTML = `<img src="${data.content}" alt="image">`;
-} else if (data.type === 'spotify') {
-    // Generate the official Spotify player (Compact version)
-    contentHTML = `<iframe style="border-radius:12px; margin-top: 1rem; margin-bottom: 1rem;" src="https://open.spotify.com/embed/track/${data.content}?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
-} else {
-    contentHTML = `<div class="entry-content">${displayContent}</div>`;
-}
+                    if (match) {
+                        const trackId = match[1];
+                        
+                        let cleanText = data.content.replace(match[0], '').trim();
+                        cleanText = cleanText.replace(/\n/g, '<br>');
 
-                // Build HTML
+                        const textHTML = cleanText !== '' 
+                            ? `<div class="entry-content">${cleanText}</div>` 
+                            : '';
+
+                        const iframeHTML = `<iframe style="border-radius:12px; margin-top: 0.5rem; margin-bottom: 1rem;" src="https://open.spotify.com/embed/track/${trackId}?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+
+                        contentHTML = textHTML + iframeHTML;
+                    } else {
+                        let displayContent = data.content.replace(/\n/g, '<br>');
+                        contentHTML = `<div class="entry-content">${displayContent}</div>`;
+                    }
+                }
+
+                // Render Structure
                 entryDiv.innerHTML = `
                     <div class="entry-date">${dateString}</div>
                     ${contentHTML}
@@ -241,7 +247,7 @@ if (data.type === 'image') {
                 `;
                 journal.appendChild(entryDiv);
 
-                // Reopen comment box if needed
+                // Reopen comment box if it was previously open
                 if (currentlyOpenId === `input-container-${entryId}`) {
                     const container = entryDiv.querySelector(`#input-container-${entryId}`);
                     const btn = entryDiv.querySelector('.comment-button');
@@ -306,37 +312,24 @@ if (data.type === 'image') {
         });
 
         // 4. Admin Command Line Logic
-commandLine.addEventListener('keydown', async function (e) {
-    if (e.key === 'Enter') {
-        if (e.shiftKey) return; 
-        e.preventDefault(); 
-        
-        const input = this.value.trim();
-        if (input !== '' && isAdmin) {
-            let type = 'text';
-            let contentToSave = input;
-            
-            // Check for image
-            if (input.match(/\.(jpeg|jpg|gif|png)$/i)) {
-                type = 'image';
-            } 
-            // Check for Spotify Track link (ignores albums/artists)
-            else if (input.includes('open.spotify.com/track/')) {
-                type = 'spotify';
-                // Extract just the song ID from the link, ignoring any extra tracking garbage like "?si="
-                const urlParts = input.split('track/');
-                contentToSave = urlParts[1].split('?')[0]; 
+        commandLine.addEventListener('keydown', async function (e) {
+            if (e.key === 'Enter') {
+                if (e.shiftKey) return; 
+                e.preventDefault(); 
+                
+                const input = this.value.trim();
+                if (input !== '' && isAdmin) {
+                    const isImage = input.match(/\.(jpeg|jpg|gif|png)$/i);
+                    
+                    await addDoc(collection(db, "entries"), {
+                        type: isImage ? 'image' : 'text',
+                        content: input,
+                        createdAt: serverTimestamp()
+                    });
+                    this.value = ''; 
+                }
             }
-            
-            await addDoc(collection(db, "entries"), {
-                type: type,
-                content: contentToSave,
-                createdAt: serverTimestamp()
-            });
-            this.value = ''; 
-        }
-    }
-});
+        });
     </script>
 </body>
 </html>
