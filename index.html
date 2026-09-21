@@ -212,14 +212,22 @@ window.addEventListener('keydown', (e) => {
                 dateString = `${month} ${day}${suffix}, ${year} ${time}`;
 
                 // Format Newlines
-                let displayContent = data.content;
-                if (data.type !== 'image') {
-                    displayContent = displayContent.replace(/\n/g, '<br>');
-                }
+let displayContent = data.content;
+if (data.type !== 'image' && data.type !== 'spotify') {
+    displayContent = displayContent.replace(/\n/g, '<br>');
+}
 
-                let contentHTML = data.type === 'image' 
-                    ? `<img src="${data.content}" alt="image">` 
-                    : `<div class="entry-content">${displayContent}</div>`;
+// Build the correct HTML based on the type
+let contentHTML = '';
+
+if (data.type === 'image') {
+    contentHTML = `<img src="${data.content}" alt="image">`;
+} else if (data.type === 'spotify') {
+    // Generate the official Spotify player (Compact version)
+    contentHTML = `<iframe style="border-radius:12px; margin-top: 1rem; margin-bottom: 1rem;" src="https://open.spotify.com/embed/track/${data.content}?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+} else {
+    contentHTML = `<div class="entry-content">${displayContent}</div>`;
+}
 
                 // Build HTML
                 entryDiv.innerHTML = `
@@ -298,24 +306,37 @@ window.addEventListener('keydown', (e) => {
         });
 
         // 4. Admin Command Line Logic
-        commandLine.addEventListener('keydown', async function (e) {
-            if (e.key === 'Enter') {
-                if (e.shiftKey) return; 
-                e.preventDefault(); 
-                
-                const input = this.value.trim();
-                if (input !== '' && isAdmin) {
-                    const isImage = input.match(/\.(jpeg|jpg|gif|png)$/i);
-                    
-                    await addDoc(collection(db, "entries"), {
-                        type: isImage ? 'image' : 'text',
-                        content: input,
-                        createdAt: serverTimestamp()
-                    });
-                    this.value = ''; 
-                }
+commandLine.addEventListener('keydown', async function (e) {
+    if (e.key === 'Enter') {
+        if (e.shiftKey) return; 
+        e.preventDefault(); 
+        
+        const input = this.value.trim();
+        if (input !== '' && isAdmin) {
+            let type = 'text';
+            let contentToSave = input;
+            
+            // Check for image
+            if (input.match(/\.(jpeg|jpg|gif|png)$/i)) {
+                type = 'image';
+            } 
+            // Check for Spotify Track link (ignores albums/artists)
+            else if (input.includes('open.spotify.com/track/')) {
+                type = 'spotify';
+                // Extract just the song ID from the link, ignoring any extra tracking garbage like "?si="
+                const urlParts = input.split('track/');
+                contentToSave = urlParts[1].split('?')[0]; 
             }
-        });
+            
+            await addDoc(collection(db, "entries"), {
+                type: type,
+                content: contentToSave,
+                createdAt: serverTimestamp()
+            });
+            this.value = ''; 
+        }
+    }
+});
     </script>
 </body>
 </html>
