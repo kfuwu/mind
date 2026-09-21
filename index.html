@@ -61,6 +61,32 @@
             margin-right: 0.5rem;
         }
 
+        /* Delete Buttons */
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: #555;
+            font-family: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-left: 0.5rem;
+            padding: 0;
+        }
+
+        .delete-btn:hover {
+            color: #ff5555;
+        }
+
+        /* Hidden by default for visitors */
+        .delete-entry-btn {
+            display: none;
+        }
+
+        /* Revealed only when logged in as Admin */
+        body.is-admin .delete-entry-btn {
+            display: inline-block;
+        }
+
         .comment-button {
             background: transparent;
             border: none;
@@ -137,7 +163,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
         
         const firebaseConfig = {
@@ -169,6 +195,7 @@
                 signInWithEmailAndPassword(auth, "god@mind.com", password)
                     .then(() => {
                         isAdmin = true;
+                        document.body.classList.add('is-admin'); // Unlocks admin-only buttons instantly
                         promptContainer.style.display = 'flex';
                         commandLine.focus();
                         console.log("Access Granted.");
@@ -187,9 +214,9 @@
             const currentlyOpenId = document.querySelector('.comment-input-container[style*="display: block"]')?.getAttribute('id');
             journal.innerHTML = ''; 
             
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                const entryId = doc.id;
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const entryId = docSnap.id;
                 const entryDiv = document.createElement('div');
                 entryDiv.className = 'entry';
                 
@@ -235,9 +262,12 @@
                     }
                 }
 
-                // Render Structure
+                // Render Structure (Includes admin entry delete button)
                 entryDiv.innerHTML = `
-                    <div class="entry-date">${dateString}</div>
+                    <div class="entry-date">
+                        ${dateString}
+                        <button class="delete-btn delete-entry-btn" data-id="${entryId}">[delete]</button>
+                    </div>
                     ${contentHTML}
                     <div class="comments-section" id="comments-${entryId}"></div>
                     <button class="comment-button" data-id="${entryId}">[ leave a note ]</button>
@@ -255,7 +285,7 @@
                     btn.style.display = 'none';
                 }
 
-                // Fetch comments
+                // Fetch comments (Includes comment delete button)
                 const commentsQ = query(collection(db, "comments"), orderBy("createdAt", "asc"));
                 onSnapshot(commentsQ, (commentSnapshot) => {
                     const commentsDiv = document.getElementById(`comments-${entryId}`);
@@ -264,7 +294,11 @@
                         commentSnapshot.forEach((cDoc) => {
                             const cData = cDoc.data();
                             if(cData.entryId === entryId) {
-                                commentsDiv.innerHTML += `<div class="comment"><span class="comment-author">user:</span> ${cData.text}</div>`;
+                                commentsDiv.innerHTML += `
+                                    <div class="comment">
+                                        <span class="comment-author">user:</span> ${cData.text}
+                                        <button class="delete-btn delete-comment-btn" data-id="${cDoc.id}">[x]</button>
+                                    </div>`;
                             }
                         });
                     }
@@ -272,8 +306,23 @@
             });
         });
         
-        // 3. UI Interaction (Comments)
-        journal.addEventListener('click', (e) => {
+        // 3. UI Interactions (Comments & Deletions)
+        journal.addEventListener('click', async (e) => {
+            // Delete Entry (Admin Only)
+            if (e.target.classList.contains('delete-entry-btn')) {
+                const id = e.target.getAttribute('data-id');
+                if (confirm("Delete this entry?")) {
+                    await deleteDoc(doc(db, "entries", id));
+                }
+            }
+
+            // Delete Comment
+            if (e.target.classList.contains('delete-comment-btn')) {
+                const id = e.target.getAttribute('data-id');
+                await deleteDoc(doc(db, "comments", id));
+            }
+
+            // Open Comment Input
             if (e.target.classList.contains('comment-button')) {
                 const id = e.target.getAttribute('data-id');
                 const inputContainer = document.getElementById(`input-container-${id}`);
@@ -283,12 +332,11 @@
             }
         });
 
+        // Submit Comment
         journal.addEventListener('keydown', async (e) => {
             if (e.target.classList.contains('comment-input')) {
                 if (e.key === 'Enter') {
-                    if (e.shiftKey) {
-                        return; 
-                    } 
+                    if (e.shiftKey) return; 
                     e.preventDefault(); 
                     
                     const id = e.target.getAttribute('data-id');
