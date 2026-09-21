@@ -105,6 +105,14 @@
             border-top: 1px solid #333;
         }
 
+
+        .entry-date {
+    font-size: 0.8rem;
+    color: #888; /* A subtle grey to match your aesthetic */
+    margin-bottom: 0.5rem;
+    font-family: inherit;
+}
+        
         .prompt-symbol { color: #fff; margin-right: 1rem; font-weight: bold; }
         /* Update your command-line style */
 #command-line {
@@ -189,10 +197,73 @@ onSnapshot(q, (snapshot) => {
     journal.innerHTML = ''; 
     
     snapshot.forEach((doc) => {
-        const data = doc.data();
-        const entryId = doc.id;
-        const entryDiv = document.createElement('div');
-        entryDiv.className = 'entry';
+    const data = doc.data();
+    const entryId = doc.id;
+    const entryDiv = document.createElement('div');
+    entryDiv.className = 'entry';
+    
+    // 1. Format the Date and Time
+    let dateString = '';
+    // Use Firebase time if synced, otherwise use current time to prevent visual pop-in
+    const d = data.createdAt ? data.createdAt.toDate() : new Date();
+    
+    const month = d.toLocaleDateString('en-US', { month: 'long' });
+    const day = d.getDate();
+    const year = d.getFullYear();
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    
+    // Calculate the 'st', 'nd', 'rd', 'th' suffix
+    const suffix = (day % 10 === 1 && day !== 11) ? 'st' : 
+                   (day % 10 === 2 && day !== 12) ? 'nd' : 
+                   (day % 10 === 3 && day !== 13) ? 'rd' : 'th';
+                   
+    dateString = `${month} ${day}${suffix}, ${year} ${time}`;
+
+    // 2. Format Newlines
+    let displayContent = data.content;
+    if (data.type !== 'image') {
+        displayContent = displayContent.replace(/\n/g, '<br>');
+    }
+
+    let contentHTML = data.type === 'image' 
+        ? `<img src="${data.content}" alt="image">` 
+        : `<div class="entry-content">${displayContent}</div>`;
+
+    // 3. Build HTML (Now including the entry-date div)
+    entryDiv.innerHTML = `
+        <div class="entry-date">${dateString}</div>
+        ${contentHTML}
+        <div class="comments-section" id="comments-${entryId}"></div>
+        <button class="comment-button" data-id="${entryId}">[ leave a note ]</button>
+        <div class="comment-input-container" id="input-container-${entryId}" style="display:none;">
+            <textarea class="comment-input" data-id="${entryId}" placeholder="type and press enter..."></textarea>
+        </div>
+    `;
+    journal.appendChild(entryDiv);
+
+    // Reopen the comment box if it was open before the refresh
+    if (currentlyOpenId === `input-container-${entryId}`) {
+        const container = entryDiv.querySelector(`#input-container-${entryId}`);
+        const btn = entryDiv.querySelector('.comment-button');
+        container.style.display = 'block';
+        btn.style.display = 'none';
+    }
+
+    // Fetch comments
+    const commentsQ = query(collection(db, "comments"), orderBy("createdAt", "asc"));
+    onSnapshot(commentsQ, (commentSnapshot) => {
+        const commentsDiv = document.getElementById(`comments-${entryId}`);
+        if(commentsDiv) {
+            commentsDiv.innerHTML = '';
+            commentSnapshot.forEach((cDoc) => {
+                const cData = cDoc.data();
+                if(cData.entryId === entryId) {
+                    commentsDiv.innerHTML += `<div class="comment"><span class="comment-author">user:</span> ${cData.text}</div>`;
+                }
+            });
+        }
+    });
+});
         
         
 let displayContent = data.content;
