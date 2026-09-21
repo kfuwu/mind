@@ -159,16 +159,15 @@
         const commandLine = document.getElementById('command-line');
         let isAdmin = false;
         
-        /// 1. Admin Login
-document.addEventListener('keydown', (e) => {
-    // e.code === 'KeyV' ignores Caps Lock and looks at the physical key instead
-    if (e.ctrlKey && e.shiftKey && (e.key === 'V' || e.key === 'v' || e.code === 'KeyV')) {
+        // 1. Admin Login (Forced Ctrl+Shift+V for Firefox)
+window.addEventListener('keydown', (e) => {
+    // e.code looks at the physical key, bypassing Shift/Caps Lock quirks
+    if (e.ctrlKey && e.shiftKey && (e.code === 'KeyV' || e.key.toLowerCase() === 'v')) {
         
-        e.preventDefault(); // Stop the browser from trying to "Paste"
+        e.preventDefault(); // Stop Firefox from intercepting with a paste command
         
         const password = prompt("ENTER SYSTEM OVERRIDE:");
         
-        // If you click "Cancel" on the prompt, stop here
         if (!password) return; 
 
         signInWithEmailAndPassword(auth, "god@mind.com", password)
@@ -179,7 +178,7 @@ document.addEventListener('keydown', (e) => {
                 console.log("Access Granted.");
             })
             .catch((error) => {
-                console.error("Auth Error:", error); // Tells us exactly why it failed in the console
+                console.error("Auth Error:", error);
                 alert("ACCESS DENIED.");
             });
     }
