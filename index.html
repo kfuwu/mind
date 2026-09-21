@@ -61,7 +61,7 @@
             margin-right: 0.5rem;
         }
 
-        /* Delete Buttons */
+        /* Delete Buttons Styling */
         .delete-btn {
             background: transparent;
             border: none;
@@ -77,13 +77,20 @@
             color: #ff5555;
         }
 
-        /* Hidden by default for visitors */
-        .delete-entry-btn {
+        /* Hidden by default for everyone */
+        .delete-entry-btn,
+        .delete-comment-btn {
             display: none;
         }
 
-        /* Revealed only when logged in as Admin */
-        body.is-admin .delete-entry-btn {
+        /* Show comment delete button if visitor wrote it */
+        .delete-comment-btn.is-owner {
+            display: inline-block;
+        }
+
+        /* Revealed for ALL entries & comments when logged in as Admin */
+        body.is-admin .delete-entry-btn,
+        body.is-admin .delete-comment-btn {
             display: inline-block;
         }
 
@@ -184,7 +191,7 @@
         const commandLine = document.getElementById('command-line');
         let isAdmin = false;
 
-        // Unique device ID to identify comment creators without user accounts
+        // Unique device ID to identify comment creators
         let myCommenterId = localStorage.getItem('mind_commenter_id');
         if (!myCommenterId) {
             myCommenterId = 'user_' + Math.random().toString(36).substring(2, 11);
@@ -202,7 +209,7 @@
                 signInWithEmailAndPassword(auth, "god@mind.com", password)
                     .then(() => {
                         isAdmin = true;
-                        document.body.classList.add('is-admin'); 
+                        document.body.classList.add('is-admin'); // Instantly displays all delete buttons via CSS
                         promptContainer.style.display = 'flex';
                         commandLine.focus();
                         console.log("Access Granted.");
@@ -291,7 +298,7 @@
                     btn.style.display = 'none';
                 }
 
-                // Fetch comments (Shows delete button ONLY if visitor owns comment OR user is Admin)
+                // Fetch comments
                 const commentsQ = query(collection(db, "comments"), orderBy("createdAt", "asc"));
                 onSnapshot(commentsQ, (commentSnapshot) => {
                     const commentsDiv = document.getElementById(`comments-${entryId}`);
@@ -301,15 +308,12 @@
                             const cData = cDoc.data();
                             if(cData.entryId === entryId) {
                                 const isOwner = cData.authorId === myCommenterId;
-                                const showDelete = isOwner || isAdmin;
-                                const deleteHTML = showDelete 
-                                    ? `<button class="delete-btn delete-comment-btn" data-id="${cDoc.id}">[x]</button>` 
-                                    : '';
+                                const ownerClass = isOwner ? 'is-owner' : '';
 
                                 commentsDiv.innerHTML += `
                                     <div class="comment">
                                         <span class="comment-author">user:</span> ${cData.text}
-                                        ${deleteHTML}
+                                        <button class="delete-btn delete-comment-btn ${ownerClass}" data-id="${cDoc.id}">[x]</button>
                                     </div>`;
                             }
                         });
@@ -358,7 +362,7 @@
                         await addDoc(collection(db, "comments"), {
                             entryId: id,
                             text: text,
-                            authorId: myCommenterId, // Saves the device ID
+                            authorId: myCommenterId,
                             createdAt: serverTimestamp()
                         });
                         
