@@ -183,6 +183,13 @@
         const promptContainer = document.getElementById('prompt-container');
         const commandLine = document.getElementById('command-line');
         let isAdmin = false;
+
+        // Unique device ID to identify comment creators without user accounts
+        let myCommenterId = localStorage.getItem('mind_commenter_id');
+        if (!myCommenterId) {
+            myCommenterId = 'user_' + Math.random().toString(36).substring(2, 11);
+            localStorage.setItem('mind_commenter_id', myCommenterId);
+        }
         
         // 1. Admin Login (Ctrl+Shift+V)
         window.addEventListener('keydown', (e) => {
@@ -195,7 +202,7 @@
                 signInWithEmailAndPassword(auth, "god@mind.com", password)
                     .then(() => {
                         isAdmin = true;
-                        document.body.classList.add('is-admin'); // Unlocks admin-only buttons instantly
+                        document.body.classList.add('is-admin'); 
                         promptContainer.style.display = 'flex';
                         commandLine.focus();
                         console.log("Access Granted.");
@@ -262,7 +269,7 @@
                     }
                 }
 
-                // Render Structure (Includes admin entry delete button)
+                // Render Structure
                 entryDiv.innerHTML = `
                     <div class="entry-date">
                         ${dateString}
@@ -277,7 +284,6 @@
                 `;
                 journal.appendChild(entryDiv);
 
-                // Reopen comment box if it was previously open
                 if (currentlyOpenId === `input-container-${entryId}`) {
                     const container = entryDiv.querySelector(`#input-container-${entryId}`);
                     const btn = entryDiv.querySelector('.comment-button');
@@ -285,7 +291,7 @@
                     btn.style.display = 'none';
                 }
 
-                // Fetch comments (Includes comment delete button)
+                // Fetch comments (Shows delete button ONLY if visitor owns comment OR user is Admin)
                 const commentsQ = query(collection(db, "comments"), orderBy("createdAt", "asc"));
                 onSnapshot(commentsQ, (commentSnapshot) => {
                     const commentsDiv = document.getElementById(`comments-${entryId}`);
@@ -294,10 +300,16 @@
                         commentSnapshot.forEach((cDoc) => {
                             const cData = cDoc.data();
                             if(cData.entryId === entryId) {
+                                const isOwner = cData.authorId === myCommenterId;
+                                const showDelete = isOwner || isAdmin;
+                                const deleteHTML = showDelete 
+                                    ? `<button class="delete-btn delete-comment-btn" data-id="${cDoc.id}">[x]</button>` 
+                                    : '';
+
                                 commentsDiv.innerHTML += `
                                     <div class="comment">
                                         <span class="comment-author">user:</span> ${cData.text}
-                                        <button class="delete-btn delete-comment-btn" data-id="${cDoc.id}">[x]</button>
+                                        ${deleteHTML}
                                     </div>`;
                             }
                         });
@@ -316,7 +328,7 @@
                 }
             }
 
-            // Delete Comment
+            // Delete Comment (Owner or Admin)
             if (e.target.classList.contains('delete-comment-btn')) {
                 const id = e.target.getAttribute('data-id');
                 await deleteDoc(doc(db, "comments", id));
@@ -346,6 +358,7 @@
                         await addDoc(collection(db, "comments"), {
                             entryId: id,
                             text: text,
+                            authorId: myCommenterId, // Saves the device ID
                             createdAt: serverTimestamp()
                         });
                         
