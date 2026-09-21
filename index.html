@@ -159,22 +159,31 @@
         const commandLine = document.getElementById('command-line');
         let isAdmin = false;
         
-        // 1. Admin Login
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.shiftKey && e.key === 'V') {
-                const password = prompt("ENTER SYSTEM OVERRIDE:");
-                signInWithEmailAndPassword(auth, "god@mind.com", password)
-                    .then(() => {
-                        isAdmin = true;
-                        promptContainer.style.display = 'flex';
-                        commandLine.focus();
-                        console.log("Access Granted.");
-                    })
-                    .catch(() => {
-                        alert("ACCESS DENIED.");
-                    });
-            }
-        });
+        /// 1. Admin Login
+document.addEventListener('keydown', (e) => {
+    // e.code === 'KeyV' ignores Caps Lock and looks at the physical key instead
+    if (e.ctrlKey && e.shiftKey && (e.key === 'V' || e.key === 'v' || e.code === 'KeyV')) {
+        
+        e.preventDefault(); // Stop the browser from trying to "Paste"
+        
+        const password = prompt("ENTER SYSTEM OVERRIDE:");
+        
+        // If you click "Cancel" on the prompt, stop here
+        if (!password) return; 
+
+        signInWithEmailAndPassword(auth, "god@mind.com", password)
+            .then(() => {
+                isAdmin = true;
+                promptContainer.style.display = 'flex';
+                commandLine.focus();
+                console.log("Access Granted.");
+            })
+            .catch((error) => {
+                console.error("Auth Error:", error); // Tells us exactly why it failed in the console
+                alert("ACCESS DENIED.");
+            });
+    }
+});
 
         // 2. Fetch Data Live
         const q = query(collection(db, "entries"), orderBy("createdAt", "desc"));
