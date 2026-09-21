@@ -36,6 +36,7 @@
         }
 
         .entry-content {
+            white-space: pre-wrap;
             font-size: 1.5rem;
             margin-bottom: 1rem;
         }
@@ -46,7 +47,6 @@
             margin-top: 1rem;
         }
 
-        
         .comments-section {
             margin-top: 1rem;
             font-size: 1rem;
@@ -79,19 +79,18 @@
             margin-top: 0.5rem;
         }
 
-    .comment-input {
-        background: transparent;
-        border: none;
-        border-bottom: 1px solid #555;
-        color: #888;
-        font-family: inherit;
-        outline: none;
-        width: 100%;
-        resize: none; 
-        overflow: hidden; 
-        padding: 0;
-    }
-
+        .comment-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #555;
+            color: #888;
+            font-family: inherit;
+            outline: none;
+            width: 100%;
+            resize: none; 
+            overflow: hidden; 
+            padding: 0;
+        }
         
         #prompt-container {
             display: none; 
@@ -105,52 +104,42 @@
             border-top: 1px solid #333;
         }
 
-
         .entry-date {
-    font-size: 0.8rem;
-    color: #888; /* A subtle grey to match your aesthetic */
-    margin-bottom: 0.5rem;
-    font-family: inherit;
-}
+            font-size: 0.8rem;
+            color: #888; 
+            margin-bottom: 0.5rem;
+            font-family: inherit;
+        }
         
         .prompt-symbol { color: #fff; margin-right: 1rem; font-weight: bold; }
-        /* Update your command-line style */
-#command-line {
-    background: transparent; 
-    border: none; 
-    color: white;
-    font-family: inherit; 
-    font-size: 1.5rem; 
-    width: 100%; 
-    outline: none;
-    resize: none;       
-    height: 2rem;       
-    padding: 0;
-}
-
-
-.entry-content {
-    white-space: pre-wrap;
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-}
+        
+        #command-line {
+            background: transparent; 
+            border: none; 
+            color: white;
+            font-family: inherit; 
+            font-size: 1.5rem; 
+            width: 100%; 
+            outline: none;
+            resize: none;       
+            height: 2rem;       
+            padding: 0;
+        }
     </style>
 </head>
 <body>
 
-    <div id="journal-entries">
-        </div>
+    <div id="journal-entries"></div>
 
     <div id="prompt-container">
-    <span class="prompt-symbol">>_</span>
-    <textarea id="command-line" autocomplete="off" placeholder="enter."></textarea>
-</div>
+        <span class="prompt-symbol">>_</span>
+        <textarea id="command-line" autocomplete="off" placeholder="enter."></textarea>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
         
         const firebaseConfig = {
             apiKey: "AIzaSyDxRqe3YEtMjp5H2X3YpinUdjp1XwanHmg",
@@ -169,8 +158,8 @@
         const promptContainer = document.getElementById('prompt-container');
         const commandLine = document.getElementById('command-line');
         let isAdmin = false;
-
         
+        // 1. Admin Login
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key === 'V') {
                 const password = prompt("ENTER SYSTEM OVERRIDE:");
@@ -187,203 +176,138 @@
             }
         });
 
-        
-const q = query(collection(db, "entries"), orderBy("createdAt", "desc"));
+        // 2. Fetch Data Live
+        const q = query(collection(db, "entries"), orderBy("createdAt", "desc"));
 
-onSnapshot(q, (snapshot) => {
-    
-    const currentlyOpenId = document.querySelector('.comment-input-container[style*="display: block"]')?.getAttribute('id');
-    
-    journal.innerHTML = ''; 
-    
-    snapshot.forEach((doc) => {
-    const data = doc.data();
-    const entryId = doc.id;
-    const entryDiv = document.createElement('div');
-    entryDiv.className = 'entry';
-    
-    // 1. Format the Date and Time
-    let dateString = '';
-    // Use Firebase time if synced, otherwise use current time to prevent visual pop-in
-    const d = data.createdAt ? data.createdAt.toDate() : new Date();
-    
-    const month = d.toLocaleDateString('en-US', { month: 'long' });
-    const day = d.getDate();
-    const year = d.getFullYear();
-    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    
-    // Calculate the 'st', 'nd', 'rd', 'th' suffix
-    const suffix = (day % 10 === 1 && day !== 11) ? 'st' : 
-                   (day % 10 === 2 && day !== 12) ? 'nd' : 
-                   (day % 10 === 3 && day !== 13) ? 'rd' : 'th';
-                   
-    dateString = `${month} ${day}${suffix}, ${year} ${time}`;
+        onSnapshot(q, (snapshot) => {
+            const currentlyOpenId = document.querySelector('.comment-input-container[style*="display: block"]')?.getAttribute('id');
+            journal.innerHTML = ''; 
+            
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                const entryId = doc.id;
+                const entryDiv = document.createElement('div');
+                entryDiv.className = 'entry';
+                
+                // Format Date
+                let dateString = '';
+                const d = data.createdAt ? data.createdAt.toDate() : new Date();
+                const month = d.toLocaleDateString('en-US', { month: 'long' });
+                const day = d.getDate();
+                const year = d.getFullYear();
+                const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                
+                const suffix = (day % 10 === 1 && day !== 11) ? 'st' : 
+                               (day % 10 === 2 && day !== 12) ? 'nd' : 
+                               (day % 10 === 3 && day !== 13) ? 'rd' : 'th';
+                               
+                dateString = `${month} ${day}${suffix}, ${year} ${time}`;
 
-    // 2. Format Newlines
-    let displayContent = data.content;
-    if (data.type !== 'image') {
-        displayContent = displayContent.replace(/\n/g, '<br>');
-    }
-
-    let contentHTML = data.type === 'image' 
-        ? `<img src="${data.content}" alt="image">` 
-        : `<div class="entry-content">${displayContent}</div>`;
-
-    // 3. Build HTML (Now including the entry-date div)
-    entryDiv.innerHTML = `
-        <div class="entry-date">${dateString}</div>
-        ${contentHTML}
-        <div class="comments-section" id="comments-${entryId}"></div>
-        <button class="comment-button" data-id="${entryId}">[ leave a note ]</button>
-        <div class="comment-input-container" id="input-container-${entryId}" style="display:none;">
-            <textarea class="comment-input" data-id="${entryId}" placeholder="type and press enter..."></textarea>
-        </div>
-    `;
-    journal.appendChild(entryDiv);
-
-    // Reopen the comment box if it was open before the refresh
-    if (currentlyOpenId === `input-container-${entryId}`) {
-        const container = entryDiv.querySelector(`#input-container-${entryId}`);
-        const btn = entryDiv.querySelector('.comment-button');
-        container.style.display = 'block';
-        btn.style.display = 'none';
-    }
-
-    // Fetch comments
-    const commentsQ = query(collection(db, "comments"), orderBy("createdAt", "asc"));
-    onSnapshot(commentsQ, (commentSnapshot) => {
-        const commentsDiv = document.getElementById(`comments-${entryId}`);
-        if(commentsDiv) {
-            commentsDiv.innerHTML = '';
-            commentSnapshot.forEach((cDoc) => {
-                const cData = cDoc.data();
-                if(cData.entryId === entryId) {
-                    commentsDiv.innerHTML += `<div class="comment"><span class="comment-author">user:</span> ${cData.text}</div>`;
+                // Format Newlines
+                let displayContent = data.content;
+                if (data.type !== 'image') {
+                    displayContent = displayContent.replace(/\n/g, '<br>');
                 }
-            });
-        }
-    });
-});
-        
-        
-let displayContent = data.content;
 
+                let contentHTML = data.type === 'image' 
+                    ? `<img src="${data.content}" alt="image">` 
+                    : `<div class="entry-content">${displayContent}</div>`;
 
-if (data.type !== 'image') {
-    displayContent = displayContent.replace(/\n/g, '<br>');
-}
+                // Build HTML
+                entryDiv.innerHTML = `
+                    <div class="entry-date">${dateString}</div>
+                    ${contentHTML}
+                    <div class="comments-section" id="comments-${entryId}"></div>
+                    <button class="comment-button" data-id="${entryId}">[ leave a note ]</button>
+                    <div class="comment-input-container" id="input-container-${entryId}" style="display:none;">
+                        <textarea class="comment-input" data-id="${entryId}" placeholder="type and press enter..."></textarea>
+                    </div>
+                `;
+                journal.appendChild(entryDiv);
 
-let contentHTML = data.type === 'image' 
-    ? `<img src="${data.content}" alt="image">` 
-    : `<div class="entry-content">${displayContent}</div>`;
+                // Reopen comment box if needed
+                if (currentlyOpenId === `input-container-${entryId}`) {
+                    const container = entryDiv.querySelector(`#input-container-${entryId}`);
+                    const btn = entryDiv.querySelector('.comment-button');
+                    container.style.display = 'block';
+                    btn.style.display = 'none';
+                }
 
-        entryDiv.innerHTML = `
-            ${contentHTML}
-            <div class="comments-section" id="comments-${entryId}"></div>
-            <button class="comment-button" data-id="${entryId}">[ leave a note ]</button>
-            <div class="comment-input-container" id="input-container-${entryId}" style="display:none;">
-                <textarea class="comment-input" data-id="${entryId}" placeholder="type and press enter..."></textarea>
-            </div>
-        `;
-        journal.appendChild(entryDiv);
-
-        
-        if (currentlyOpenId === `input-container-${entryId}`) {
-            const container = entryDiv.querySelector(`#input-container-${entryId}`);
-            const btn = entryDiv.querySelector('.comment-button');
-            container.style.display = 'block';
-            btn.style.display = 'none';
-        }
-
-        
-        const commentsQ = query(collection(db, "comments"), orderBy("createdAt", "asc"));
-        onSnapshot(commentsQ, (commentSnapshot) => {
-            const commentsDiv = document.getElementById(`comments-${entryId}`);
-            if(commentsDiv) {
-                commentsDiv.innerHTML = '';
-                commentSnapshot.forEach((cDoc) => {
-                    const cData = cDoc.data();
-                    if(cData.entryId === entryId) {
-                        commentsDiv.innerHTML += `<div class="comment"><span class="comment-author">user:</span>${cData.text}</div>`;
+                // Fetch comments
+                const commentsQ = query(collection(db, "comments"), orderBy("createdAt", "asc"));
+                onSnapshot(commentsQ, (commentSnapshot) => {
+                    const commentsDiv = document.getElementById(`comments-${entryId}`);
+                    if(commentsDiv) {
+                        commentsDiv.innerHTML = '';
+                        commentSnapshot.forEach((cDoc) => {
+                            const cData = cDoc.data();
+                            if(cData.entryId === entryId) {
+                                commentsDiv.innerHTML += `<div class="comment"><span class="comment-author">user:</span> ${cData.text}</div>`;
+                            }
+                        });
                     }
                 });
+            });
+        });
+        
+        // 3. UI Interaction (Comments)
+        journal.addEventListener('click', (e) => {
+            if (e.target.classList.contains('comment-button')) {
+                const id = e.target.getAttribute('data-id');
+                const inputContainer = document.getElementById(`input-container-${id}`);
+                inputContainer.style.display = 'block';
+                inputContainer.querySelector('.comment-input').focus();
+                e.target.style.display = 'none'; 
             }
         });
-    });
-});
 
-        
-journal.addEventListener('click', (e) => {
-    
-    if (e.target.classList.contains('comment-button')) {
-        const id = e.target.getAttribute('data-id');
-        const inputContainer = document.getElementById(`input-container-${id}`);
-        
-        
-        inputContainer.style.display = 'block';
-        inputContainer.querySelector('.comment-input').focus();
-        e.target.style.display = 'none'; 
-    }
-});
-
-
-journal.addEventListener('keydown', async (e) => {
-    
-    if (e.target.classList.contains('comment-input')) {
-        
-        if (e.key === 'Enter') {
-            
-            if (e.shiftKey) {
-                return; 
-            } 
-            
-            
-            e.preventDefault(); 
-            
-            const id = e.target.getAttribute('data-id');
-            const text = e.target.value.trim();
-            
-            if (text !== '') {
-                await addDoc(collection(db, "comments"), {
-                    entryId: id,
-                    text: text,
-                    createdAt: serverTimestamp()
-                });
-                
-                
-                e.target.value = '';
-                const idContainer = document.getElementById(`input-container-${id}`);
-                const button = document.querySelector(`.comment-button[data-id="${id}"]`);
-                idContainer.style.display = 'none';
-                button.style.display = 'block'; 
+        journal.addEventListener('keydown', async (e) => {
+            if (e.target.classList.contains('comment-input')) {
+                if (e.key === 'Enter') {
+                    if (e.shiftKey) {
+                        return; 
+                    } 
+                    e.preventDefault(); 
+                    
+                    const id = e.target.getAttribute('data-id');
+                    const text = e.target.value.trim();
+                    
+                    if (text !== '') {
+                        await addDoc(collection(db, "comments"), {
+                            entryId: id,
+                            text: text,
+                            createdAt: serverTimestamp()
+                        });
+                        
+                        e.target.value = '';
+                        const idContainer = document.getElementById(`input-container-${id}`);
+                        const button = document.querySelector(`.comment-button[data-id="${id}"]`);
+                        idContainer.style.display = 'none';
+                        button.style.display = 'block'; 
+                    }
+                }
             }
-        }
-    }
-});
+        });
 
-
-commandLine.addEventListener('keydown', async function (e) {
-    if (e.key === 'Enter') {
-        
-        if (e.shiftKey) return; 
-
-        
-        e.preventDefault(); 
-        
-        const input = this.value.trim();
-        if (input !== '' && isAdmin) {
-            const isImage = input.match(/\.(jpeg|jpg|gif|png)$/i);
-            
-            await addDoc(collection(db, "entries"), {
-                type: isImage ? 'image' : 'text',
-                content: input,
-                createdAt: serverTimestamp()
-            });
-
-            this.value = ''; 
-        }
-    }
-});
+        // 4. Admin Command Line Logic
+        commandLine.addEventListener('keydown', async function (e) {
+            if (e.key === 'Enter') {
+                if (e.shiftKey) return; 
+                e.preventDefault(); 
+                
+                const input = this.value.trim();
+                if (input !== '' && isAdmin) {
+                    const isImage = input.match(/\.(jpeg|jpg|gif|png)$/i);
+                    
+                    await addDoc(collection(db, "entries"), {
+                        type: isImage ? 'image' : 'text',
+                        content: input,
+                        createdAt: serverTimestamp()
+                    });
+                    this.value = ''; 
+                }
+            }
+        });
     </script>
 </body>
 </html>
