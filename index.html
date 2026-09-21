@@ -88,10 +88,10 @@
             display: inline-block;
         }
 
-        /* Revealed for ALL entries & comments when logged in as Admin */
+        /* FORCED REVEAL for ALL entries & comments when logged in as Admin */
         body.is-admin .delete-entry-btn,
         body.is-admin .delete-comment-btn {
-            display: inline-block;
+            display: inline-block !important; 
         }
 
         .comment-button {
@@ -171,7 +171,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
         
         const firebaseConfig = {
             apiKey: "AIzaSyDxRqe3YEtMjp5H2X3YpinUdjp1XwanHmg",
@@ -197,6 +197,15 @@
             myCommenterId = 'user_' + Math.random().toString(36).substring(2, 11);
             localStorage.setItem('mind_commenter_id', myCommenterId);
         }
+
+        // Keep Admin logged in across page refreshes
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                isAdmin = true;
+                document.body.classList.add('is-admin'); 
+                promptContainer.style.display = 'flex';
+            }
+        });
         
         // 1. Admin Login (Ctrl+Shift+V)
         window.addEventListener('keydown', (e) => {
@@ -209,7 +218,7 @@
                 signInWithEmailAndPassword(auth, "god@mind.com", password)
                     .then(() => {
                         isAdmin = true;
-                        document.body.classList.add('is-admin'); // Instantly displays all delete buttons via CSS
+                        document.body.classList.add('is-admin'); 
                         promptContainer.style.display = 'flex';
                         commandLine.focus();
                         console.log("Access Granted.");
