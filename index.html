@@ -61,6 +61,12 @@
             margin-right: 0.5rem;
         }
 
+        /* Make admin comments stand out slightly */
+        .comment-author.admin {
+            color: #999; 
+            font-weight: bold;
+        }
+
         /* Delete Buttons Styling */
         .delete-btn {
             background: transparent;
@@ -318,10 +324,14 @@
                             if(cData.entryId === entryId) {
                                 const isOwner = cData.authorId === myCommenterId;
                                 const ownerClass = isOwner ? 'is-owner' : '';
+                                
+                                // Determine if this comment was made by the Admin
+                                const roleLabel = cData.isAdmin ? 'admin' : 'user';
+                                const roleClass = cData.isAdmin ? 'admin' : '';
 
                                 commentsDiv.innerHTML += `
                                     <div class="comment">
-                                        <span class="comment-author">user:</span> ${cData.text}
+                                        <span class="comment-author ${roleClass}">${roleLabel}:</span> ${cData.text}
                                         <button class="delete-btn delete-comment-btn ${ownerClass}" data-id="${cDoc.id}">[x]</button>
                                     </div>`;
                             }
@@ -372,6 +382,7 @@
                             entryId: id,
                             text: text,
                             authorId: myCommenterId,
+                            isAdmin: isAdmin, // Tells Firebase you wrote this while logged in
                             createdAt: serverTimestamp()
                         });
                         
