@@ -270,12 +270,15 @@
                     contentHTML = `<img src="${data.content}" alt="image">`;
                 } else {
                     const spotifyRegex = /https?:\/\/open\.spotify\.com\/track\/([a-zA-Z0-9]+)(\?[^\s]*)?/;
-                    const match = data.content.match(spotifyRegex);
+                    const appleRegex = /https?:\/\/music\.apple\.com\/[^\s]+/;
 
-                    if (match) {
-                        const trackId = match[1];
+                    const spotifyMatch = data.content.match(spotifyRegex);
+                    const appleMatch = data.content.match(appleRegex);
+
+                    if (spotifyMatch) {
+                        const trackId = spotifyMatch[1];
                         
-                        let cleanText = data.content.replace(match[0], '').trim();
+                        let cleanText = data.content.replace(spotifyMatch[0], '').trim();
                         cleanText = cleanText.replace(/\n/g, '<br>');
 
                         const textHTML = cleanText !== '' 
@@ -285,6 +288,24 @@
                         const iframeHTML = `<iframe style="border-radius:12px; margin-top: 0.5rem; margin-bottom: 1rem;" src="https://open.spotify.com/embed/track/${trackId}?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
 
                         contentHTML = textHTML + iframeHTML;
+
+                    } else if (appleMatch) {
+                        const rawUrl = appleMatch[0];
+                        
+                        let cleanText = data.content.replace(rawUrl, '').trim();
+                        cleanText = cleanText.replace(/\n/g, '<br>');
+
+                        const textHTML = cleanText !== '' 
+                            ? `<div class="entry-content">${cleanText}</div>` 
+                            : '';
+
+                        // Convert normal link to embed link
+                        const embedUrl = rawUrl.replace('music.apple.com', 'embed.music.apple.com');
+                        
+                        const iframeHTML = `<iframe allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" height="150" style="width:100%;max-width:800px;overflow:hidden;background:transparent;border-radius:12px;margin-top:0.5rem;margin-bottom:1rem;" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" src="${embedUrl}"></iframe>`;
+
+                        contentHTML = textHTML + iframeHTML;
+
                     } else {
                         let displayContent = data.content.replace(/\n/g, '<br>');
                         contentHTML = `<div class="entry-content">${displayContent}</div>`;
@@ -325,7 +346,6 @@
                                 const isOwner = cData.authorId === myCommenterId;
                                 const ownerClass = isOwner ? 'is-owner' : '';
                                 
-                                // Determine if this comment was made by the Admin
                                 const roleLabel = cData.isAdmin ? 'admin' : 'user';
                                 const roleClass = cData.isAdmin ? 'admin' : '';
 
@@ -382,7 +402,7 @@
                             entryId: id,
                             text: text,
                             authorId: myCommenterId,
-                            isAdmin: isAdmin, // Tells Firebase you wrote this while logged in
+                            isAdmin: isAdmin, 
                             createdAt: serverTimestamp()
                         });
                         
