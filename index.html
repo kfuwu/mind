@@ -299,8 +299,9 @@
                             ? `<div class="entry-content">${cleanText}</div>` 
                             : '';
 
-                        // Convert normal link to embed link
-                        const embedUrl = rawUrl.replace('music.apple.com', 'embed.music.apple.com');
+                        // Convert normal link to embed link and force dark theme
+                        let embedUrl = rawUrl.replace('music.apple.com', 'embed.music.apple.com');
+                        embedUrl += embedUrl.includes('?') ? '&theme=dark' : '?theme=dark';
                         
                         const iframeHTML = `<iframe allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" height="150" style="width:100%;max-width:800px;overflow:hidden;background:transparent;border-radius:12px;margin-top:0.5rem;margin-bottom:1rem;" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" src="${embedUrl}"></iframe>`;
 
